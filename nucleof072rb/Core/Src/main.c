@@ -48,6 +48,8 @@
 /* USER CODE BEGIN PV */
 uint8_t txData[3];
 uint8_t rxData[3];
+uint8_t DUTY_CYCLE_CNT = 3200;
+uint8_t ADC_MAX = 1023;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,7 +101,7 @@ int main(void)
   txData[2] = 0x00;        // Don't care
 
   // Configure CS pin as output
-  HAL_GPIO_WritePin(GPIOB, SPI1_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 
   // Start PWM timer
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -110,24 +112,24 @@ int main(void)
   while (1)
   {
     // Start SPI transaction
-    HAL_GPIO_WritePin(GPIOB, SPI1_CS_Pin, GPIO_PIN_RESET);  // CS low
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);  // CS low
     
     // Transmit and receive 3 bytes
     HAL_SPI_TransmitReceive(&hspi1, txData, rxData, 3, HAL_MAX_DELAY);
     
     // End SPI transaction
-    HAL_GPIO_WritePin(GPIOB, SPI1_CS_Pin, GPIO_PIN_SET);  // CS high
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);  // CS high
     
     // Process received data (10-bit value, 0-1023)
-    uint16_t adcValue = ((rxData[1] & 0x03) << 8) | rxData[2];
+    uint16_t adc_value = ((rxData[1] & 0x03) << 8) | rxData[2];
     
     // Convert ADC value (0-1023) to PWM counts (1000-2000)
-    // 1000 counts = 1ms = 5% duty cycle
-    // 2000 counts = 2ms = 10% duty cycle
-    uint16_t pwmCounts = 1000 + (adcValue * 1000) / 1023;
+    // 3200 counts = 1ms = 5% duty cycle
+    // 6400 counts = 2ms = 10% duty cycle
+    uint16_t pwm_counts = DUTY_CYCLE_CNT + (adc_value * DUTY_CYCLE_CNT) / ADC_MAX;
     
     // Update PWM compare value
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwmCounts);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwm_counts);
     
     HAL_Delay(10);  // Small delay between readings
 
